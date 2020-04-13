@@ -1,0 +1,341 @@
+//REFERÊNCIA DO CÓDIGO ABAIXO TIRADA DO VÍDEO https://www.youtube.com/watch?v=31s4zZ9pD_g DO CANAL BRINCANDO COM IDÉIAS.
+
+
+// INCLUSÃO DAS BIBLIOTECAS
+#include <Adafruit_Fingerprint.h>
+#include <SoftwareSerial.h>
+
+//BIBLIOTECA ELABORADA PELO CANAL "BRINCANDO COM IDÉIAS"
+#include <PushButton.h>
+
+
+//Carrega a biblioteca LiquidCrystal
+#include <LiquidCrystal.h>
+
+
+//Define os pinos que serão utilizados para ligação ao display
+LiquidCrystal lcd(12, 10, 5, 13 , 3, 2);
+
+
+// DEFINIÇÃO DO PINO DO BOTÃO
+#define pinBot 11
+
+// DEFINIÇÃO DO PINO DA TRAVA
+#define pinTrava 4
+
+// INSTANCIANDO OBJETOS
+SoftwareSerial mySerial(7, 8);
+
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+PushButton botao(pinBot);
+
+// DECLARAÇÃO DAS VARIÁVEIS E FUNCOES
+
+
+bool gravar=false;
+
+uint8_t modoGravacaoID(uint8_t IDgravar);
+
+
+void setup() {
+  pinMode(pinTrava, OUTPUT);
+  digitalWrite(pinTrava, HIGH);
+
+  Serial.begin(9600);
+  finger.begin(57600);
+
+	if(finger.verifyPassword()){
+    	Serial.println("Sensor biometrico encontrado!");
+}	else {
+    	Serial.println("Sensor biometrico não encontrado! Verifique a conexão e reinicie o sistema");
+    	while(true) {
+	  		delay(2000);
+      }
+  }
+
+	Serial.println("Fim do Setup!");
+	
+	//Define o número de colunas e linhas do LCD
+  	lcd.begin(16, 2);
+
+
+	//Lê quantidade de digitais salvas
+	finger.getTemplateCount();
+    Serial.print(finger.templateCount);
+
+  }
+void loop() {
+
+  getFingerprintIDez();
+  
+  botao.button_loop();
+
+  if ( botao.pressed() ){
+    gravar = true;
+  }
+
+  if(gravar){
+    modoGravacaoID(0);
+    gravar = false;
+  }
+  //Limpa a tela
+	lcd.clear();
+  
+  //Posiciona o cursor na coluna 3, linha 0;
+	lcd.setCursor(1, 0);
+  //Envia o texto entre aspas para o LCD
+	lcd.print("COLOQUE O DEDO");
+	lcd.setCursor(3, 1);
+	lcd.print("NO SENSOR!");
+		delay(100);
+}
+
+
+uint8_t modoGravacaoID(uint8_t IDgravar) {
+
+  int p = -1;
+  Serial.print("Esperando uma leitura válida para gravar #");
+Serial.println(IDgravar);
+      //Limpa a tela
+  lcd.clear();
+       lcd.setCursor(0, 0);
+  //Envia o texto entre aspas para o LCD
+  lcd.print("INSIRA A DIGITAL");
+         lcd.setCursor(2, 1);
+  lcd.print("PARA GRAVAR");
+  
+  
+  while (p != FINGERPRINT_OK) {
+    p = finger.getImage();
+  
+    switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("Leitura concluida");
+  lcd.clear();
+     lcd.setCursor(4, 0);
+  lcd.print("Leitura");
+     lcd.setCursor(3, 1);
+  lcd.print("Concluida!");
+  delay(1000);
+      break;
+    case FINGERPRINT_NOFINGER:
+      Serial.println(".");
+      delay(200);
+      break;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Erro comunicação");
+      break;
+    case FINGERPRINT_IMAGEFAIL:
+      Serial.println("Erro de leitura");
+      break;
+    default:
+      Serial.println("Erro desconhecido");
+      break;
+    }
+  }
+
+  // OK successo!
+
+  p = finger.image2Tz(1);
+  switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("Leitura convertida");
+      break;
+    case FINGERPRINT_IMAGEMESS:
+      Serial.println("Leitura suja");
+      return p;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Erro de comunicação");
+      return p;
+    case FINGERPRINT_FEATUREFAIL:
+      Serial.println("Não foi possível encontrar propriedade da digital");
+      return p;
+    case FINGERPRINT_INVALIDIMAGE:
+      Serial.println("Não foi possível encontrar propriedade da digital");
+      return p;
+    default:
+      Serial.println("Erro desconhecido");
+      return p;
+  }
+
+  Serial.println("Remova o dedo");
+      lcd.clear();
+       lcd.setCursor(1, 0);
+  lcd.print("Remova o Dedo!");
+  delay(2000);
+  
+  p = 0;
+  while (p != FINGERPRINT_NOFINGER) {
+    p = finger.getImage();
+  }
+  Serial.print("ID "); Serial.println(IDgravar);
+  p = -1;
+  Serial.println("Coloque o Mesmo dedo novamente...");
+  lcd.clear();
+          lcd.setCursor(1, 0);
+  lcd.print("Coloque o Dedo");
+            lcd.setCursor(3, 1);
+  lcd.print(" Novamente.");
+  delay(1000);
+ 
+  
+  while (p != FINGERPRINT_OK) {
+    p = finger.getImage();
+    switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("Leitura concluída");
+          //Limpa a tela
+  lcd.clear();
+      lcd.setCursor(4, 0);
+  lcd.print("Leitura");
+      lcd.setCursor(3, 1);
+  lcd.print("Concluida!");
+  delay(1000);
+      break;
+    case FINGERPRINT_NOFINGER:
+      Serial.print(".");
+      delay(200);
+      break;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Erro de comunicação");
+      break;
+    case FINGERPRINT_IMAGEFAIL:
+      Serial.println("Erro de Leitura");
+      break;
+    default:
+      Serial.println("Erro desconhecido");
+      break;
+    }
+  }
+
+  // OK successo!
+
+  p = finger.image2Tz(2);
+  switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("Leitura convertida");
+      break;
+    case FINGERPRINT_IMAGEMESS:
+      Serial.println("Leitura suja");
+      return p;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Erro de comunicação");
+      return p;
+    case FINGERPRINT_FEATUREFAIL:
+      Serial.println("Não foi possível encontrar as propriedades da digital");
+      return p;
+    case FINGERPRINT_INVALIDIMAGE:
+      Serial.println("Não foi possível encontrar as propriedades da digital");
+      return p;
+    default:
+      Serial.println("Erro desconhecido");
+      return p;
+  }
+
+  // OK convertido!
+  Serial.print("Criando modelo para #");  Serial.println(IDgravar);
+
+  p = finger.createModel();
+  if (p == FINGERPRINT_OK) {
+    Serial.println("As digitais batem!");
+  } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
+    Serial.println("Erro de comunicação");
+    return p;
+  } else if (p == FINGERPRINT_ENROLLMISMATCH) {
+    Serial.println("As digitais não batem");
+      lcd.clear();
+      lcd.setCursor(3, 0);
+  //Envia o texto entre aspas para o LCD
+  lcd.print("AS DIGITAIS");
+      lcd.setCursor(4, 1);
+  //Envia o texto entre aspas para o LCD
+  lcd.print("NAO BATEM!");
+  delay(2000);
+    return p;
+  } else {
+    Serial.println("Erro desconhecido");
+    return p;
+  }
+
+  Serial.print("ID "); Serial.println(IDgravar);
+  p = finger.storeModel(IDgravar);
+  if (p == FINGERPRINT_OK) {
+    Serial.println("Armazenado!");
+  lcd.clear();
+  lcd.setCursor(4, 0);
+  lcd.print("Biometria");
+  lcd.setCursor(3, 1);
+  lcd.print("Armazenada!");
+
+  delay(1000);
+  } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
+    Serial.println("Erro de comunicação");
+    return p;
+  } else if (p == FINGERPRINT_BADLOCATION) {
+    Serial.println("Não foi possível gravar neste local da memória");
+    return p;
+  } else if (p == FINGERPRINT_FLASHERR) {
+    Serial.println("Erro durante escrita na memória flash");
+    return p;
+  } else {
+    Serial.println("Erro desconhecido");
+    return p;
+  }
+}
+
+int getFingerprintIDez() {
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK) {
+  return 1;
+  }
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return 1;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK) {
+       lcd.clear();
+       lcd.setCursor(3, 0);
+       lcd.print("BIOMETRIA");
+               lcd.setCursor(2, 1);
+  lcd.print("DESCONHECIDA!");
+   
+  
+  delay(2000);
+  return 1;
+  }
+ if (p != FINGERPRINT_OK)  return 1;
+
+  p =  finger.getTemplateCount();
+
+  if (finger.fingerID == 0) {
+     Serial.print("Modo Administrador!");
+         //Limpa a tela
+  lcd.clear();
+             lcd.setCursor(6, 0);
+  lcd.print("MODO");
+               lcd.setCursor(1, 1);
+  lcd.print("ADMINISTRADOR!");
+  delay(2000);
+
+  
+     modoGravacaoID(finger.templateCount);
+     return 0;
+
+  } else {
+
+     digitalWrite(pinTrava, LOW);
+     Serial.print("ID encontrado #"); Serial.print(finger.fingerID);
+     Serial.print(" com confiança de "); Serial.println(finger.confidence);
+  lcd.clear();
+       lcd.setCursor(1, 0);
+
+  lcd.print("ID ENCONTRADO!");
+         lcd.setCursor(3, 1);
+  //Envia o texto entre aspas para o LCD
+  lcd.print("OBRIGADO!");
+     delay(1000);
+     digitalWrite(pinTrava, HIGH);
+     return finger.fingerID;
+  }
+}
